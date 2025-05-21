@@ -1,0 +1,23 @@
+{
+  "name": "ws-backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": " tsc -b ",
+    "dev": "pnpm run build && node pnpm run start",
+    "start": "node ./dist/server.js "
+  },
+  "dependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/ws": "^8.5.13",
+    "express": "^4.21.2",
+    "ws": "^8.18.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/express": "^5.0.0"
+  }
+}
