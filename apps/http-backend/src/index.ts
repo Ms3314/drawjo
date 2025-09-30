@@ -15,6 +15,11 @@ app.use(express.json())
 app.post("/signup" , async (req , res) => {
     try {
         const {username  , email , password} = req.body ;
+        if (!username || !email || !password) {
+            res.status(500).json({
+                message : "Credentials missing"
+            })
+        }
         const pdata = CreateUserSchema.safeParse(req.body) ; 
         if (!pdata.success) {
             return res.json({
@@ -62,19 +67,27 @@ app.post("/signup" , async (req , res) => {
 
 app.post("/signin" ,async  (req , res) => {
     try {
+        console.log("Sign in has been initiated")
         const {email , password } = req.body ; 
         const parsedData = SigninSchema.safeParse(req.body) ; 
-        const responseData = await prismaClient.user.findUnique({
+        
+        const responseData = await prismaClient.user.findFirst({
             where : {
                 email : parsedData?.data?.email
             } ,
         })
+        
         if (!responseData) {
-            return res.json(403).json({
-                message : "Invalid credentials"
+            return res.status(403).json({
+                message : "Invalid credentials" , 
+                response : responseData
             })
         }
-        if (await argon2.verify(responseData?.password , password)) {
+        // console.log(responseData.password , password)
+        const isPasswordCorrect = await argon2.verify(responseData?.password , password)
+        // console.log(isPasswordCorrect , "Password ??" , hash == responseData.password
+        // )
+        if (isPasswordCorrect) {
             const userId = responseData.id 
             const token = jwt.sign({
                 userId 
@@ -84,17 +97,18 @@ app.post("/signin" ,async  (req , res) => {
                 token
             })
         } else {
-            return res.json(403).json({
+            return res.status(402).json({
                 message : "Invalid Credentials"
             })
         }
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             message : "An Error has occured" ,
             error 
         })   
     }
 } )
+
 
 app.post('/create-room' , middleware , async  (req , res) => {
     // the room id is bring given out 
@@ -153,7 +167,36 @@ app.post('/create-room' , middleware , async  (req , res) => {
     
 })
 
-
+app.get('/chat/:roomId' ,middleware , async (req , res) => {
+    try {
+        const userId = req.userId ; 
+        const roomId = Number(req.params.roomId) ;
+        const chats = await prismaClient.chat.findMany({
+            where : {
+                roomId : roomId ,
+                userId ,
+            } ,
+            orderBy : {
+                id : "desc"
+            } ,
+            take : 50
+        })
+        if (!chats) {
+            return res.status(402).json({
+                message : "Invalid Parameters"
+            })
+        }
+        return res.status(200).json({
+            message : "The Chat is :" ,
+            chats : chats
+        })
+    } catch (error) {
+        return res.status(500).json({
+            error ,
+            message : "An error has occured"
+        })
+    }
+})
 
 app.listen(3000 , () => {
     console.log("App is listening on port 3000");
