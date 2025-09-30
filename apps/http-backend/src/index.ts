@@ -3,7 +3,7 @@ import argon2 from "argon2"
 import jwt from "jsonwebtoken" 
 import { JWT_SECRET } from "@repo/backend-common/config";
 import { middleware } from "./middleware";
-import {CreateUserSchema , SigninSchema} from "@repo/common/types"
+import {createRoomSchema, CreateUserSchema , SigninSchema} from "@repo/common/types"
 import {prismaClient} from "@repo/db/db" 
 
 const app = express(); 
@@ -63,10 +63,10 @@ app.post("/signup" , async (req , res) => {
 app.post("/signin" ,async  (req , res) => {
     try {
         const {email , password } = req.body ; 
-        const data = SigninSchema.safeParse(req.body) ; 
+        const parsedData = SigninSchema.safeParse(req.body) ; 
         const responseData = await prismaClient.user.findUnique({
             where : {
-                email
+                email : parsedData?.data?.email
             } ,
         })
         if (!responseData) {
@@ -75,7 +75,7 @@ app.post("/signin" ,async  (req , res) => {
             })
         }
         if (await argon2.verify(responseData?.password , password)) {
-            const userId = 33 
+            const userId = responseData.id 
             const token = jwt.sign({
                 userId 
             } , JWT_SECRET) ;
@@ -96,31 +96,61 @@ app.post("/signin" ,async  (req , res) => {
     }
 } )
 
-app.post('create-room' , middleware , async  (req , res) => {
+app.post('/create-room' , middleware , async  (req , res) => {
     // the room id is bring given out 
-    const userId = req.userId 
-    const response = await prismaClient.user.findUnique({
-        where : {
-            id : userId.toString()
+    try {
+        const roomname = createRoomSchema.safeParse(req.body) ; 
+        if (!roomname.success) {
+            return res.status(402).json({
+                message : "Invalid Credentials"
+            })
         }
-    })
-    if (!response) {
-        return res.status(405).json({
-            message : "Invalid Credentials"
+        const userId = req.userId
+        console.log(userId) 
+        if (!userId) {
+            console.log(userId)
+            return ;
+        }
+        const response = await prismaClient.user.findUnique({
+            where : {
+                id : userId
+            }
+        })
+        if (!response) {
+            console.log(response , "this is the response");
+            return res.status(405).json({
+                message : "Invalid Credentials"
+            })
+        }
+        const slug : string = response?.email.split('@')[0] + (Math.floor((Math.random() * 5 )*10000)).toString() 
+        const doesTheSamePersonHaveTheSameName = await prismaClient.room.findFirst({
+            where : {
+               adminId : userId ,  
+               name : roomname.data?.name   
+            }
+        })
+        if (doesTheSamePersonHaveTheSameName) {
+            res.status(403).json({
+                message : "you cannot have duplicate room Names"
+            })
+        }
+        const roomCreated = await prismaClient.room.create({
+            data : {
+                slug  ,
+                adminId : userId.toString() ,
+                name : roomname.data?.name 
+            }
+        })
+        return res.json({
+            name : roomCreated.name , 
+            roomid : roomCreated.id 
+        })
+    } catch (error) {
+        return res.status(500).json({
+            error 
         })
     }
-    const slug : string = response?.email.split('@')[0] + (Math.floor((Math.random() * 5 )*10000)).toString() 
-
-    const roomCreated = await prismaClient.room.create({
-        data : {
-            slug  ,
-            adminId : userId.toString() ,
-            name : response?.username 
-        }
-    })
-    res.json({
-        roomid : roomCreated.id 
-    })
+    
 })
 
 
