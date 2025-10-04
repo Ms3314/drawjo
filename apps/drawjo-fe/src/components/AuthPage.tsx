@@ -1,37 +1,35 @@
 "use client"
 import axios, { AxiosResponse } from 'axios'
-import React, { useState } from 'react'
-import { HTTP_BACKEND } from '../../config'
+import React, { Dispatch, SetStateAction, useState } from 'react'
 import { Router, useRouter } from 'next/router'
+import { handleSubmitSignupOp } from '@/app/signup/page'
+import { handleSubmitSignInOp } from '@/app/signin/page'
 
-const AuthPage = async ({isSignin , handleSubmit} : {isSignin : boolean , handleSubmit : () => null}) => {
+const AuthPage = ({isSignin   } : {isSignin : boolean }) => {
     const [name , setName] = useState<String>("")
     const [email , setEmail] = useState<string>("")
     const [pass , setPass] = useState<string>("")
-    const router = useRouter() 
-    
-    async function handleSubmitSignIn () {
-        console.log("the form has been submitted")
-        const response:AxiosResponse =  await axios.post(`${HTTP_BACKEND}/signin` , {
-                email ,
-                password : pass 
-        })
-        localStorage.setItem("token" , response.data.token) ;
-    }
-    if (!isSignin) {
+    if (isSignin == false) {
         return <div className='w-screen h-screen flex justify-center items-center'>
             <input onChange={(e)=>setName(e.target.value)} type="name" />
             <input onChange={(e)=>setEmail(e.target.value)} type="email" />
             <input onChange={(e)=>setPass(e.target.value)} type="pass" />
-            <button className='p-5 rounded-xl' onClick={handleSubmit}>Submit</button>
+            <button className='p-5 rounded-xl' onClick={() => handleSubmitSignupOp({
+                username : name ,
+                email ,
+                password : pass 
+            })}>Submit</button>
     </div>
     }
-    if (isSignin) {
+    if (isSignin == true) {
         return <div className='w-screen h-screen flex justify-center items-center'>
             <input onChange={(e)=>setEmail(e.target.value)} type="email" />
             <input onChange={(e)=>setPass(e.target.value)} type="pass" />
-            <button className='p-5 rounded-xl' onClick={handleSubmit}>Submit</button>
-    </div>
+            <button className='p-5 rounded-xl' onClick={() => handleSubmitSignInOp({
+                email ,
+                password : pass 
+            })}>Submit</button>
+            </div>
     }
 }
 

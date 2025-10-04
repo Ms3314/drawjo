@@ -14,104 +14,6 @@ app.use(cors())
 // we need to make a signin route 
 // we also need to make create room route 
 
-app.post("/signup" , async (req , res) => {
-    try {
-        const {username  , email , password} = req.body ;
-        if (!username || !email || !password) {
-            res.status(500).json({
-                message : "Credentials missing"
-            })
-        }
-        const pdata = CreateUserSchema.safeParse(req.body) ; 
-        if (!pdata.success) {
-            return res.json({
-                message : "Incorrect Inputs"
-            })
-        }
-        // check if there exiss an email already 
-        const hash = await argon2.hash(pdata.data.password);
-        const doesEmailAlreadyExists = await prismaClient.user.findFirst({
-            where : {
-                email : pdata.data.email 
-            }
-        })
-        if (doesEmailAlreadyExists?.email) {
-            return res.status(402).json({
-                message : "the email has been already used"
-            })
-        }
-        // store this hash inside the db 
-        const response = await prismaClient.user.create({
-            data : {
-                username : pdata.data?.username ,
-                email : pdata.data?.email ,
-                password : hash 
-            }
-        })
-        if (!response) {
-            return res.status(500).json({
-                message : "An Internal Error Has Occured related to the DB "
-            })
-        }
-        // now create a jwt token out of the email and send it to the client
-        return res.status(200).json({
-            userId : response.id , 
-            message : "User has beeen created succesfully"
-        })
-    } catch (error) {
-        return res.status(500).json({
-            message : "An Internal Error has occured" ,
-            error  : error 
-        })
-    }
-    
-})
-
-app.post("/signin" ,async  (req , res) => {
-    try {
-        console.log("Sign in has been initiated")
-        const {email , password } = req.body ; 
-        const parsedData = SigninSchema.safeParse(req.body) ; 
-        
-        const responseData = await prismaClient.user.findFirst({
-            where : {
-                email : parsedData?.data?.email
-            } ,
-        })
-        
-        if (!responseData) {
-            return res.status(403).json({
-                message : "Invalid credentials" , 
-                response : responseData
-            })
-        }
-        // console.log(responseData.password , password)
-        const isPasswordCorrect = await argon2.verify(responseData?.password , password)
-        // console.log(isPasswordCorrect , "Password ??" , hash == responseData.password
-        // )
-        if (isPasswordCorrect) {
-            const userId = responseData.id 
-            const token = jwt.sign({
-                userId 
-            } , JWT_SECRET) ;
-            return res.status(200).json({
-                message : "User is valid and credentials are correct" , 
-                token
-            })
-        } else {
-            return res.status(402).json({
-                message : "Invalid Credentials"
-            })
-        }
-    } catch (error) {
-        return res.status(500).json({
-            message : "An Error has occured" ,
-            error 
-        })   
-    }
-} )
-
-
 app.post('/create-room' , middleware , async  (req , res) => {
     // the room id is bring given out 
     try {
@@ -169,6 +71,111 @@ app.post('/create-room' , middleware , async  (req , res) => {
     
 })
 
+app.post("/signup", async (req, res) => {
+    try {
+        const {username, email, password} = req.body;
+        if (!username || !email || !password) {
+            return res.status(500).json({
+                message: "Credentials missing"
+            });
+        }
+        
+        const pdata = CreateUserSchema.safeParse(req.body);
+        if (!pdata.success) {
+            return res.json({
+                message: "Incorrect Inputs"
+            });
+        }
+
+        const doesEmailAlreadyExists = await prismaClient.user.findFirst({
+            where: {
+                email: pdata.data.email 
+            }
+        });
+        
+        if (doesEmailAlreadyExists?.email) {
+            return res.status(402).json({
+                message: "the email has been already used"
+            });
+        }
+        console.log(pdata.data.username)
+        const hash = await argon2.hash(pdata.data.password);
+        const response = await prismaClient.user.create({
+            data: {
+                username: pdata.data?.username,
+                email: pdata.data?.email,
+                password: hash 
+            }
+        });
+
+        if (!response) {
+            return res.status(500).json({
+                message: "An Internal Error Has Occured related to the DB"
+            });
+        }
+
+        return res.status(200).json({
+            userId: response.id,
+            message: "User has beeen created succesfully"
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            message: "An Internal Error has occured",
+            error: error
+        });
+    }
+});
+
+app.post("/signin", async (req, res) => {
+    try {
+        console.log("Sign in has been initiated");
+        const parsedData = SigninSchema.safeParse(req.body);
+        
+        if (!parsedData.success) {
+            console.log(parsedData.error , "this is the error")
+            return res.status(400).json({
+                message: "Invalid input format"
+            });
+        }
+
+        const responseData = await prismaClient.user.findFirstOrThrow({
+            where: {
+                email: parsedData.data.email
+            }
+        });
+        
+        if (!responseData) {
+            return res.status(403).json({
+                message: "Invalid credentials"
+            });
+        }
+
+        const isPasswordCorrect = await argon2.verify(responseData.password, parsedData.data.password);
+
+        if (!isPasswordCorrect) {
+            return res.status(402).json({
+                message: "Invalid Credentials"
+            });
+        }
+
+        const token = jwt.sign({
+            userId: responseData.id
+        }, JWT_SECRET);
+
+        return res.status(200).json({
+            message: "User is valid and credentials are correct",
+            token
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            message: "An Error has occured",
+            error
+        });
+    }
+});
+
 app.get('/chat/:roomId' , middleware , async (req , res) => {
     try {
         console.log("This is hit")
@@ -202,5 +209,5 @@ app.get('/chat/:roomId' , middleware , async (req , res) => {
 })
 
 app.listen(3003 , () => {
-    console.log("App is listening on port 3000");
+    console.log("App is listening on port 3003");
 })
