@@ -5,9 +5,11 @@ import { JWT_SECRET } from "@repo/backend-common/config";
 import { middleware } from "./middleware";
 import {createRoomSchema, CreateUserSchema , SigninSchema} from "@repo/common/types"
 import {prismaClient} from "@repo/db/db" 
+import cors from "cors"
 
 const app = express(); 
 app.use(express.json())
+app.use(cors())
 // we need to make a signup route 
 // we need to make a signin route 
 // we also need to make create room route 
@@ -167,8 +169,9 @@ app.post('/create-room' , middleware , async  (req , res) => {
     
 })
 
-app.get('/chat/:roomId' ,middleware , async (req , res) => {
+app.get('/chat/:roomId' , middleware , async (req , res) => {
     try {
+        console.log("This is hit")
         const userId = req.userId ; 
         const roomId = Number(req.params.roomId) ;
         const chats = await prismaClient.chat.findMany({
@@ -198,6 +201,6 @@ app.get('/chat/:roomId' ,middleware , async (req , res) => {
     }
 })
 
-app.listen(3000 , () => {
+app.listen(3003 , () => {
     console.log("App is listening on port 3000");
 })

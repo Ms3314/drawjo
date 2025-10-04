@@ -1,42 +1,14 @@
-"use client"
-import { useEffect, useRef } from "react"
+// import { useEffect, useRef } from "react"
+// import { initDraw } from "../../../../draw";
+import Canvas from "@/components/MainCanvas";
 
-export default function Canvas () {
-    const canvasRef = useRef<HTMLCanvasElement>(null)
-    useEffect(()=>{
-        if (canvasRef.current) {
-            const canvas = canvasRef.current;
-            const ctx = canvas.getContext("2d");
-            if (!ctx) return ;
-            let clicked = false ;
-            let startX = 0 ;
-            let startY = 0 ;
-            canvas.addEventListener("mouseup", (e)=> {
-                // mouseup ka mtlb mouse leave kardiye toh 
-                clicked = false 
-                console.log(e.clientX)
-                console.log(e.clientY)
-            })
-            canvas.addEventListener("mousedown" , (e) => {
-                // mousedown mtlb mouse click kar diye 
-                clicked = true 
-                startX = e.clientX
-                startY = e.clientY
-            })
-            
-            canvas.addEventListener("mousemove", (e)=> {
-                    if (clicked) {
-                        const width = e.clientX - startX ;
-                        const heigt = e.clientY - startY ;
-                        ctx.clearRect(0,0,canvas.width , canvas.height);
-                        ctx.strokeRect(startX , startY , width , heigt)
-                    }
-            })
-        }
+export default async function  CanvasPage ({params} : { 
+    params: {
+        roomId : string
+    }
+}) {
+    const roomId1 = (await params).roomId ;
+    console.log(roomId1)
 
-    },[])
-    return <div>
-        <p>Hello everyone</p>
-        <canvas width={500} ref={canvasRef} height={500} className="bg-white border-4 border-red-500"></canvas>
-    </div>
+    return <Canvas roomId = {roomId1} />
 }
