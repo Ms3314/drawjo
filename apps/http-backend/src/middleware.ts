@@ -11,15 +11,13 @@ export function middleware ( req : Request  , res : Response , next : NextFuncti
             req.userId = decoded.userId as string  ;
             next()
         } else {
+            console.log("You are unauthorized" , token , decoded)
             res.status(403).json({
                 message : "Unauthorized"
             })
         }
     } catch (error) {
-        res.status(500).json({
-            message : "An error has occured" ,
-            error 
-        })
+        throw new Error("An error occured while checking token" + error)
     }
     
 }

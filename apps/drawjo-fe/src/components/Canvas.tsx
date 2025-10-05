@@ -10,7 +10,7 @@ const Canvas = ({roomId , socket} : {roomId : string , socket : WebSocket}) => {
         }
     },[])
   
-  return <div>
+  return <div >
         <canvas className=" border-3"  width={10800} ref={canvasRef} height={1000}  ></canvas>
     </div>
 }

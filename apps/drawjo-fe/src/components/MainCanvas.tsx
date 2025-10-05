@@ -26,7 +26,7 @@ const MainCanvas = ({roomId} : any) => {
 
     
     useEffect(()=>{
-        const ws = new WebSocket(`${WS_URL}?token=${token}`)
+        const ws = new WebSocket(`${WS_URL}?token=${localStorage.getItem("token")}`)
         ws.onopen = () => {
             setSocket(ws)
             ws.send(JSON.stringify({
@@ -34,7 +34,7 @@ const MainCanvas = ({roomId} : any) => {
                 roomId : roomId
             }))
         }
-    })
+    },[])
 
     
     if (!socket) {
@@ -42,7 +42,7 @@ const MainCanvas = ({roomId} : any) => {
             Connecting to the server
         </div>
     } else {
-        <Canvas roomId={roomId} socket={socket} />
+        return <Canvas roomId={roomId} socket={socket} />
     }
     
 }

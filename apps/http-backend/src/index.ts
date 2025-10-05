@@ -17,10 +17,12 @@ app.use(cors())
 app.post('/create-room' , middleware , async  (req , res) => {
     // the room id is bring given out 
     try {
+        console.log(req.body)
         const roomname = createRoomSchema.safeParse(req.body) ; 
         if (!roomname.success) {
+            console.log("this not success")
             return res.status(402).json({
-                message : "Invalid Credentials"
+                message : "Invalid room name"
             })
         }
         const userId = req.userId
@@ -201,6 +203,7 @@ app.get('/chat/:roomId' , middleware , async (req , res) => {
             chats : chats
         })
     } catch (error) {
+        console.log(error)
         return res.status(500).json({
             error ,
             message : "An error has occured"
