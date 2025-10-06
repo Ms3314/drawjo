@@ -1,4 +1,4 @@
-import { RefObject } from "react";
+import { Dispatch, RefObject, SetStateAction } from "react";
 import { HTTP_BACKEND } from "../config";
 import axios from "axios";
 
@@ -15,7 +15,7 @@ type Shape = {
     radius : number 
 }
 
-export async function initDraw(canvas : HTMLCanvasElement , roomId:string , socket: WebSocket) {
+export async function initDraw(canvas : HTMLCanvasElement , roomId:string , socket: WebSocket , selectedTools  : string = "rectangle") {
             const ctx = canvas.getContext("2d");
 
             let existingShapes:Shape[] = await getExistingShapes(roomId) 
@@ -46,24 +46,36 @@ export async function initDraw(canvas : HTMLCanvasElement , roomId:string , sock
                 clicked = false 
                 const width = e.clientX - startX ;
                 const height = e.clientY - startY ;
+                const radius = width / 2
                 // look the thing here is x is the starting corodinate 
                 // y is the other starting y cordinate 
                 // now we put height and width kyuki usse pure shape ka pata chal jata 
                 // thus when the thing is final we then push it into the thing
-                const shape:Shape = {
-                    type : "rect" ,
-                    width ,
-                    height ,
-                    x : startX ,
-                    y : startY
+                console.log("what are u man" , selectedTools == "" ? "null" : selectedTools , "this is the selected tool")
+                if (selectedTools === "rectangle") {
+                    console.log("are we still rendering the rectangle")
+                    let shape:Shape = {
+                        type : "rect" ,
+                        width ,
+                        height ,
+                        x : startX ,
+                        y : startY
+                    }
+                    existingShapes.push(shape)
+                    
+                    socket.send(JSON.stringify({
+                        type : "chat" ,
+                        message : JSON.stringify(shape) ,
+                        roomId : roomId
+                    }))
                 }
-                existingShapes.push(shape)
-                
-                socket.send(JSON.stringify({
-                    type : "chat" ,
-                    message : JSON.stringify(shape) ,
-                    roomId : roomId
-                }))
+                if (selectedTools === "circle") {
+                    console.log("this is also being sel while mouseup")
+                    ctx.beginPath();
+                    ctx.arc(startX + radius , startY + radius  , radius , 0 , 2 * Math.PI , false);
+                    // ctx.arc(e.clientX - radius , e.clientY - radius , radius , 0 , 2 * Math.PI , false);
+                    ctx.stroke()
+                }
             })
             canvas.addEventListener("mousedown" , (e) => {
                 // mousedown mtlb mouse click kar diye 
@@ -76,13 +88,23 @@ export async function initDraw(canvas : HTMLCanvasElement , roomId:string , sock
             canvas.addEventListener("mousemove", (e)=> {
                     if (clicked) {
                         const width = e.clientX - startX ;
-                        const heigt = e.clientY - startY ;
+                        const height = e.clientY - startY ;
+                        const radius = width / 2
+
                         clearCanvas(existingShapes , canvas , ctx )
                         // here we are creating a rect here 
                         // first adding the stroke color
                         ctx.strokeStyle= "rgba(255 , 255 , 255)"
                         // then here we are adding putting the real thing 
-                        ctx.strokeRect(startX , startY , width , heigt)
+                        if (selectedTools === "rectangle") {
+                            ctx.strokeRect(startX , startY , width , height)
+                        } 
+                        if (selectedTools === "circle") {
+                            ctx.beginPath();
+                            ctx.arc(startX + radius ,startY + radius, radius , 0 , 2 * Math.PI , false);
+                            // ctx.arc(startX , startY , radius , 0 , 2 * Math.PI , false);
+                            ctx.stroke()
+                        }
                     }
             })
 }
@@ -97,6 +119,9 @@ function clearCanvas( existingShapes : Shape[] , canvas : HTMLCanvasElement ,  c
                 ctx.strokeStyle = "rgba(255 , 255 , 255)"
                 ctx.strokeRect(shape.x , shape.y , shape.width , shape.height)           
             } 
+            // if (shape.type === "circle") {
+
+            // }
         })
 }
 
