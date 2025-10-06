@@ -4,12 +4,12 @@ import { initDraw } from '../../draw'
 import IconButton from './IconButton'
 import { Circle, RectangleHorizontal, Square, Text, Triangle } from 'lucide-react'
 
-const Canvas = ({roomId , socket} : {roomId : string , socket : WebSocket}) => {
+const Canvas = ({roomId , socket ,realtime } : {roomId : string , socket? : WebSocket , realtime : boolean}) => {
     const [selectedTools , setSelectTools] = useState<string>("")
     const canvasRef = useRef<HTMLCanvasElement>(null)
     useEffect(()=>{
         if (canvasRef.current) {
-            initDraw(canvasRef.current , roomId , socket , selectedTools)
+            initDraw(canvasRef.current , roomId , socket , selectedTools , realtime)
         }
     },[selectedTools])
   

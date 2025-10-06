@@ -42,7 +42,7 @@ const MainCanvas = ({roomId} : any) => {
             Connecting to the server
         </div>
     } else {
-        return <Canvas roomId={roomId} socket={socket} />
+        return <Canvas realtime={true} roomId={roomId} socket={socket} />
     }
     
 }
