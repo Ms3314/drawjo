@@ -1,8 +1,9 @@
 import { Dispatch, RefObject, SetStateAction } from "react";
 import { HTTP_BACKEND } from "../config";
 import axios from "axios";
+import { storeAndGetDataInLocalStorage } from "@/components/Canvas";
 
-type Shape = {
+export type Shape = {
     type : "rect" ,
     x : number ,
     y : number , 
@@ -17,7 +18,7 @@ type Shape = {
 
 export async function initDraw(canvas : HTMLCanvasElement , roomId:string , socket? : WebSocket , selectedTools  : string = "rectangle" , realtime : boolean = false) {
             const ctx = canvas.getContext("2d");
-
+            // ak methood hona jisse the context persists without even using the db for local stuff 
             let existingShapes:Shape[] = await getExistingShapes(roomId , realtime) 
             if (!ctx) return ;
             // get the message and add it into our temporary state 
@@ -30,6 +31,7 @@ export async function initDraw(canvas : HTMLCanvasElement , roomId:string , sock
                         // console.log("this is the messages", typeof message.chats , message)
                         const parsedShape:Shape = JSON.parse(message.message);
                         existingShapes.push(parsedShape)
+                        storeAndGetDataInLocalStorage("set" , existingShapes)
                         clearCanvas(existingShapes , canvas , ctx);
                     }
                 }
@@ -65,7 +67,10 @@ export async function initDraw(canvas : HTMLCanvasElement , roomId:string , sock
                         x : startX ,
                         y : startY
                     }
+                    console.log(existingShapes , typeof existingShapes)
                     existingShapes.push(shape)
+                    storeAndGetDataInLocalStorage("set" , existingShapes)
+
                     if (realtime && socket) {
                         socket.send(JSON.stringify({
                             type : "chat" ,
@@ -81,7 +86,9 @@ export async function initDraw(canvas : HTMLCanvasElement , roomId:string , sock
                         centerY ,
                         radius
                     }
+                    console.log(existingShapes , typeof existingShapes)
                     existingShapes.push(shape)
+                    storeAndGetDataInLocalStorage("set" , existingShapes)
                     if (realtime && socket) {
                         socket.send(JSON.stringify({
                             type : "chat" ,
@@ -135,23 +142,34 @@ function clearCanvas( existingShapes : Shape[] , canvas : HTMLCanvasElement ,  c
     ctx.fillStyle = "rgba(0 , 0 , 0)"
     ctx.fillRect(0,0,canvas.width , canvas.height);
     // this function draws the existing shapes
-        existingShapes.map((shape) => {
-            if (shape.type === "rect") {
-                ctx.strokeStyle = "rgba(255 , 255 , 255)"
-                ctx.strokeRect(shape.x , shape.y , shape.width , shape.height)           
-            } 
-            if (shape.type === "circle") {
-                ctx.beginPath();
-                ctx.arc(shape.centerX , shape.centerY  , shape.radius , 0 , 2 * Math.PI , false);
-                    // ctx.arc(e.clientX - radius , e.clientY - radius , radius , 0 , 2 * Math.PI , false);
-                ctx.stroke()
-            }
-        })
+    if (existingShapes?.length == 0 || !existingShapes || typeof existingShapes === "string") return ;
+    console.log("why is this showing some random error" , typeof existingShapes)
+    console.log("why is this showing some random error" , typeof existingShapes)
+
+    existingShapes.map((shape) => {
+        if (shape.type === "rect") {
+            ctx.strokeStyle = "rgba(255 , 255 , 255)"
+            ctx.strokeRect(shape.x , shape.y , shape.width , shape.height)           
+        } 
+        if (shape.type === "circle") {
+            ctx.beginPath();
+            ctx.arc(shape.centerX , shape.centerY  , shape.radius , 0 , 2 * Math.PI , false);
+                // ctx.arc(e.clientX - radius , e.clientY - radius , radius , 0 , 2 * Math.PI , false);
+            ctx.stroke()
+        }
+    })
 }
 
 
 async function getExistingShapes(roomId : string , realtime : boolean) {
-    if (realtime === false) return [];
+    if (realtime === false ) {
+        const store = storeAndGetDataInLocalStorage("get", [])
+        if (store != null) {
+            return JSON.parse(store)
+        } else {
+            return []
+        }
+    } 
     const token = localStorage.getItem('token')
     const res = await axios.get(`${HTTP_BACKEND}/chat/${roomId}` , {
         headers : {

@@ -1,8 +1,20 @@
 "use client"
 import React, { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react'
-import { initDraw } from '../../draw'
+import { initDraw, Shape } from '../../draw'
 import IconButton from './IconButton'
 import { Circle, RectangleHorizontal, Square, Text, Triangle } from 'lucide-react'
+
+export function storeAndGetDataInLocalStorage(job : string , data? : Shape[] ) : string | null  {
+  if (job === "set" && data) {
+    const serialized = JSON.stringify(data);
+    localStorage.setItem("shapes", serialized);
+  } else if (job === "get") {
+    const shapes = localStorage.getItem("shapes") ; 
+    if (shapes) {
+      return shapes
+    }
+  }
+}
 
 const Canvas = ({roomId , socket ,realtime } : {roomId : string , socket? : WebSocket , realtime : boolean}) => {
     const [selectedTools , setSelectTools] = useState<string>("")
@@ -12,7 +24,7 @@ const Canvas = ({roomId , socket ,realtime } : {roomId : string , socket? : WebS
             initDraw(canvasRef.current , roomId , socket , selectedTools , realtime)
         }
     },[selectedTools])
-  
+    
   return <div style={{
     height : "100vh" ,
     overflow : "hidden"
