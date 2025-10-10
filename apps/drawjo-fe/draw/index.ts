@@ -14,6 +14,41 @@ export type Shape = {
     centerX : number ,
     centerY : number ,
     radius : number 
+} | {
+    type : "arrow" | "line",
+    fromX : number ,
+    fromY : number ,
+    toX : number ,
+    toY : number 
+}
+// thankyou some random guy on stack overflow for this code
+function drawArrow(ctx:CanvasRenderingContext2D, fromX:number, fromY:number, toX:number, toY:number, arrowWidth = 10, arrowLength = 15) {
+    ctx.beginPath();
+    ctx.moveTo(fromX, fromY);
+    ctx.lineTo(toX, toY);
+    ctx.stroke();
+
+    // Calculate the angle of the line
+    const angle = Math.atan2(toY - fromY, toX - fromX);
+
+    ctx.beginPath();
+    ctx.moveTo(toX, toY);
+    ctx.lineTo(
+        toX - arrowLength * Math.cos(angle - Math.PI / 6),
+        toY - arrowLength * Math.sin(angle - Math.PI / 6)
+    );
+    ctx.moveTo(toX, toY);
+    ctx.lineTo(
+        toX - arrowLength * Math.cos(angle + Math.PI / 6),
+        toY - arrowLength * Math.sin(angle + Math.PI / 6)
+    );
+    ctx.stroke();
+}
+function drawLine(ctx:CanvasRenderingContext2D, fromX:number, fromY:number, toX:number, toY:number, arrowWidth = 10, arrowLength = 15) {
+    ctx.beginPath();
+    ctx.moveTo(fromX, fromY);
+    ctx.lineTo(toX, toY);
+    ctx.stroke();
 }
 
 export async function initDraw(canvas : HTMLCanvasElement , roomId:string , socket? : WebSocket , selectedTools  : string = "rectangle" , realtime : boolean = false) {
@@ -82,9 +117,9 @@ export async function initDraw(canvas : HTMLCanvasElement , roomId:string , sock
                 if (selectedTools === "circle") {
                     let shape:Shape = {
                         type : "circle" ,
-                        centerX  ,
-                        centerY ,
-                        radius
+                        centerX : Math.abs(centerX) ,
+                        centerY : Math.abs(centerY),
+                        radius : Math.abs(radius)
                     }
                     console.log(existingShapes , typeof existingShapes)
                     existingShapes.push(shape)
@@ -101,6 +136,42 @@ export async function initDraw(canvas : HTMLCanvasElement , roomId:string , sock
                     // ctx.arc(startX + radius , startY + radius  , radius , 0 , 2 * Math.PI , false);
                     // // ctx.arc(e.clientX - radius , e.clientY - radius , radius , 0 , 2 * Math.PI , false);
                     // ctx.stroke()
+                }
+                if (selectedTools === "arrow") {
+                    let shape:Shape = {
+                        type : "arrow" ,
+                        fromX : startX  ,
+                        fromY : startY ,
+                        toX : e.clientX ,
+                        toY : e.clientY
+                    }
+                    console.log(existingShapes , typeof existingShapes)
+                    existingShapes.push(shape)
+                    storeAndGetDataInLocalStorage("set" , existingShapes)
+                }
+                if (selectedTools === "line") {
+                    let shape:Shape = {
+                        type : "line" ,
+                        fromX : startX  ,
+                        fromY : startY ,
+                        toX : e.clientX ,
+                        toY : e.clientY
+                    }
+                    console.log(existingShapes , typeof existingShapes)
+                    existingShapes.push(shape)
+                    storeAndGetDataInLocalStorage("set" , existingShapes)
+                }
+                if (selectedTools === "arrow") {
+                    let shape:Shape = {
+                        type : "arrow" ,
+                        fromX : startX  ,
+                        fromY : startY ,
+                        toX : e.clientX ,
+                        toY : e.clientY
+                    }
+                    console.log(existingShapes , typeof existingShapes)
+                    existingShapes.push(shape)
+                    storeAndGetDataInLocalStorage("set" , existingShapes)
                 }
             })
             canvas.addEventListener("mousedown" , (e) => {
@@ -129,9 +200,20 @@ export async function initDraw(canvas : HTMLCanvasElement , roomId:string , sock
                         } 
                         if (selectedTools === "circle") {
                             ctx.beginPath();
-                            ctx.arc(centerX ,centerY, radius , 0 , 2 * Math.PI , false);
+                            ctx.arc(Math.abs(centerX) ,Math.abs(centerY), Math.abs(radius) , 0 , 2 * Math.PI , false);
                             // ctx.arc(startX , startY , radius , 0 , 2 * Math.PI , false);
                             ctx.stroke()
+                        } 
+                        if (selectedTools === "arrow") {
+                            drawArrow(ctx , startX , startY, e.clientX , e.clientY)
+                        }
+                        if (selectedTools === "line") {
+                            drawLine(ctx , startX , startY, e.clientX , e.clientY)
+                        } 
+                        if (selectedTools === "pencil") {
+                            ctx.beginPath();
+                            ctx.arc(8, 8 , 90, 0, Math.PI * 2);
+                            ctx.fill();
                         }
                     }
             })
@@ -151,11 +233,17 @@ function clearCanvas( existingShapes : Shape[] , canvas : HTMLCanvasElement ,  c
             ctx.strokeStyle = "rgba(255 , 255 , 255)"
             ctx.strokeRect(shape.x , shape.y , shape.width , shape.height)           
         } 
-        if (shape.type === "circle") {
+        if (shape.type === "circle" && shape.radius >= 0) {
             ctx.beginPath();
             ctx.arc(shape.centerX , shape.centerY  , shape.radius , 0 , 2 * Math.PI , false);
-                // ctx.arc(e.clientX - radius , e.clientY - radius , radius , 0 , 2 * Math.PI , false);
+            // ctx.arc(e.clientX - radius , e.clientY - radius , radius , 0 , 2 * Math.PI , false);
             ctx.stroke()
+        }
+        if (shape.type === "arrow") {
+            drawArrow(ctx , shape.fromX , shape.fromY , shape.toX , shape.toY)
+        }
+        if (shape.type === "line") {
+            drawLine(ctx , shape.fromX , shape.fromY , shape.toX , shape.toY)
         }
     })
 }
