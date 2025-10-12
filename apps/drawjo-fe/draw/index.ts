@@ -2,6 +2,7 @@ import { Dispatch, RefObject, SetStateAction } from "react";
 import { HTTP_BACKEND } from "../config";
 import axios from "axios";
 import { storeAndGetDataInLocalStorage } from "@/components/Canvas";
+import { clear } from "console";
 
 export type Shape = {
     type : "rect" ,
@@ -20,6 +21,10 @@ export type Shape = {
     fromY : number ,
     toX : number ,
     toY : number 
+} | {
+    type : "point" ,
+    pointX : number ,
+    pointY : number
 }
 // thankyou some random guy on stack overflow for this code
 function drawArrow(ctx:CanvasRenderingContext2D, fromX:number, fromY:number, toX:number, toY:number, arrowWidth = 10, arrowLength = 15) {
@@ -50,12 +55,18 @@ function drawLine(ctx:CanvasRenderingContext2D, fromX:number, fromY:number, toX:
     ctx.lineTo(toX, toY);
     ctx.stroke();
 }
+function drawPoint(ctx:CanvasRenderingContext2D, pointX:number , pointY:number) {
+    // ctx.fillRect(pointX , pointY,10,10)
+    ctx.moveTo(pointX , pointY)
+    ctx.stroke()
+}
 
-export async function initDraw(canvas : HTMLCanvasElement , roomId:string , socket? : WebSocket , selectedTools  : string = "rectangle" , realtime : boolean = false) {
+export async function initDraw(stopSelectedTools : () => void , canvas : HTMLCanvasElement , roomId:string , socket? : WebSocket , selectedTools  : string = "rectangle" ,    realtime : boolean = false) {
             const ctx = canvas.getContext("2d");
             // ak methood hona jisse the context persists without even using the db for local stuff 
             let existingShapes:Shape[] = await getExistingShapes(roomId , realtime) 
             if (!ctx) return ;
+            
             // get the message and add it into our temporary state 
             if (realtime && socket) {
                 socket.onmessage = (event) => {
@@ -80,6 +91,115 @@ export async function initDraw(canvas : HTMLCanvasElement , roomId:string , sock
             let clicked = false ;
             let startX = 0 ;
             let startY = 0 ;
+            let complete = ""
+            let coordiX = 0 ;
+            let coordiY = 0 ;
+            let intialClickPosX = 0
+            let intialClickPosY = 0
+            // function textualFunction(e: MouseEvent) {
+            //     if (!ctx) return ;
+            //     handleClickFunctionality(e , ctx)
+            // }
+            // function KeyDownForListeningForText(es : any) {
+            //             const pattern:RegExp = new RegExp("^[a-zA-Z ]$")
+            //             console.log(es.key , "this is the escape key")
+            //             if (!ctx) return 
+            //             if (es.key === "Escape") { 
+            //                 console.log("this is escape key")
+            //                 stopSelectedTools()
+            //                 clearCanvas(existingShapes , canvas , ctx)
+            //                 complete = ""
+            //                 canvas.removeEventListener("click" , textualFunction)
+            //                 canvas.removeEventListener("keydown" , KeyDownForListeningForText)
+            //                 return ;
+            //             }
+            //             if (es.key === "Backspace") {
+            //                 console.log("Backspace is being hit")
+            //                 let sub = complete.slice(0 , complete.length-1)
+            //                 complete = sub
+            //                 clearCanvas(existingShapes , canvas , ctx)
+            //                 ctx.fillStyle = "white";  // Set the fill color for text
+            //                 ctx.strokeStyle = "rgba(255, 255, 255)";
+            //                 ctx.font = "48px serif";
+            //                 ctx.fillText(complete, coordiX , coordiY);
+            //             }
+            //             if (pattern.test(es.key) === false) {
+            //                 return ;
+            //             }
+            //             complete+=es.key ;
+            //             console.log("this is hte keydown now" , complete , "text")
+            //             ctx.fillStyle = "white";  // Set the fill color for text
+            //             ctx.strokeStyle = "rgba(255, 255, 255)";
+            //             ctx.font = "48px serif";
+            //             ctx.fillText(complete, coordiX , coordiY);
+            // }
+            // function handleClickFunctionality(e: MouseEvent , ctx:CanvasRenderingContext2D) {
+            //     clearCanvas(existingShapes , canvas , ctx)
+            //     stopSelectedTools()
+            //      if (selectedTools == "text") {
+            //         // ctx.fillStyle = "white";  // Set the fill color for text
+            //         // ctx.strokeStyle = "rgba(255, 255, 255)";
+            //         // ctx.font = "48px serif";
+            //         // let complete = ""
+            //         // ctx.fillText(complete, e.clientX, e.clientY);
+            //         coordiX = e.clientX ;
+            //         coordiY = e.clientY
+            //         document.addEventListener("keydown" , KeyDownForListeningForText)
+            //     }
+            // }
+            // canvas.addEventListener("click", textualFunction)
+
+            let textToolActive = false;
+
+            function textualFunction(e: MouseEvent) {
+                if (!ctx || selectedTools !== "text") return;
+                
+                intialClickPosX = e.clientX;
+                intialClickPosY = e.clientY;
+                coordiX = e.clientX;
+                coordiY = e.clientY;
+                complete = "";
+                textToolActive = true;
+
+                clearCanvas(existingShapes, canvas, ctx);
+            }
+
+            function KeyDownForListeningForText(es: KeyboardEvent) {
+                if (!textToolActive || !ctx) return;
+                let sizepx = 20 
+                const pattern = /^[a-zA-Z ]$/;
+
+                if (es.key === "Escape") {
+                    stopSelectedTools();
+                    clearCanvas(existingShapes, canvas, ctx);
+                    complete = "";
+                    textToolActive = false;
+                    return;
+                }
+
+                if (es.key === "Backspace") {
+                    complete = complete.slice(0, -1);
+                } else if (pattern.test(es.key)) {
+                    complete += es.key;
+                }
+                
+                if (es.key === "Enter") {
+                    coordiX = intialClickPosX ;
+                    coordiY = intialClickPosY + 10 + sizepx
+                    complete = ""
+                }
+
+                clearCanvas(existingShapes, canvas, ctx);
+                ctx.fillStyle = "white";
+                ctx.strokeStyle = "rgba(255,255,255)";
+                ctx.font = `${sizepx}px serif`;
+                ctx.fillText(complete, coordiX, coordiY);
+            }
+
+// Attach once at initialization
+            canvas.addEventListener("click", textualFunction);
+            document.addEventListener("keydown", KeyDownForListeningForText);
+
             canvas.addEventListener("mouseup", (e)=> {
                 // mouseup ka mtlb mouse leave kardiye toh 
                 clicked = false 
@@ -173,13 +293,35 @@ export async function initDraw(canvas : HTMLCanvasElement , roomId:string , sock
                     existingShapes.push(shape)
                     storeAndGetDataInLocalStorage("set" , existingShapes)
                 }
+                if (selectedTools === "point") {
+                    let shape:Shape = {
+                        type : "point" ,
+                        pointX : e.clientX ,
+                        pointY : e.clientY
+                    }
+                    console.log(existingShapes , typeof existingShapes)
+                    existingShapes.push(shape)
+                    storeAndGetDataInLocalStorage("set" , existingShapes)
+                }
+                //  if (selectedTools == "text") {
+                //     let complete = ""
+                //     document.addEventListener("keydown" , (es) => {
+                //         complete+=es.key ;
+                //         console.log("this is hte keydown now" , complete , "text")
+                //         ctx.fillStyle = "white";  // Set the fill color for text
+                //         ctx.strokeStyle = "rgba(255, 255, 255)";
+                //         ctx.font = "48px serif";
+                //         ctx.fillText("Hello world", e.clientX, e.clientY);
+                //     })
+                // }
             })
             canvas.addEventListener("mousedown" , (e) => {
                 // mousedown mtlb mouse click kar diye 
+                ctx.strokeStyle= "rgba(255 , 255 , 255)"
                 clicked = true 
                 startX = e.clientX
                 startY = e.clientY
-               
+              
             })
             
             canvas.addEventListener("mousemove", (e)=> {
@@ -210,10 +352,12 @@ export async function initDraw(canvas : HTMLCanvasElement , roomId:string , sock
                         if (selectedTools === "line") {
                             drawLine(ctx , startX , startY, e.clientX , e.clientY)
                         } 
-                        if (selectedTools === "pencil") {
-                            ctx.beginPath();
-                            ctx.arc(8, 8 , 90, 0, Math.PI * 2);
-                            ctx.fill();
+                        if (selectedTools === "point") {
+                            console.log("this is the point")
+                            drawPoint(ctx , e.clientX , e.clientY)
+                        } 
+                        if (selectedTools === "text") {
+                            // text can only be trigerred when it is on mousedown 
                         }
                     }
             })
@@ -227,7 +371,11 @@ function clearCanvas( existingShapes : Shape[] , canvas : HTMLCanvasElement ,  c
     if (existingShapes?.length == 0 || !existingShapes || typeof existingShapes === "string") return ;
     console.log("why is this showing some random error" , typeof existingShapes)
     console.log("why is this showing some random error" , typeof existingShapes)
-
+    ctx.font = "48px serif";
+            // console.log("are we coming here ")
+            // ctx.fillStyle = "white";  // Set the fill color for text
+            // ctx.strokeStyle = "rgba(255, 255, 255)";
+            // ctx.fillText("Hello world", 100, 500);
     existingShapes.map((shape) => {
         if (shape.type === "rect") {
             ctx.strokeStyle = "rgba(255 , 255 , 255)"
@@ -244,6 +392,9 @@ function clearCanvas( existingShapes : Shape[] , canvas : HTMLCanvasElement ,  c
         }
         if (shape.type === "line") {
             drawLine(ctx , shape.fromX , shape.fromY , shape.toX , shape.toY)
+        }
+        if (shape.type === "point") {
+            drawPoint(ctx , shape.pointX , shape.pointY)
         }
     })
 }

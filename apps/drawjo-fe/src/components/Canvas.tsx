@@ -22,12 +22,15 @@ export function storeAndGetDataInLocalStorage(job : string , data? : Shape[] ) :
 const Canvas = ({roomId , socket ,realtime } : {roomId : string , socket? : WebSocket , realtime : boolean}) => {
     const [selectedTools , setSelectTools] = useState<string>("")
     const canvasRef = useRef<HTMLCanvasElement>(null)
+    function stopSelectedTools () {
+      setSelectTools("")
+    } 
     useEffect(()=>{
         if (canvasRef.current) {
-            initDraw(canvasRef.current , roomId , socket , selectedTools , realtime)
+            initDraw(stopSelectedTools , canvasRef.current , roomId , socket , selectedTools , realtime , )
         }
     },[selectedTools])
-
+    
   return <div style={{
     height : "100vh" ,
     overflow : "hidden"
@@ -55,7 +58,7 @@ function Topbar({setSelectTools , selectedTools} : {
         <IconButton icon={<Circle />} name="circle" selectedTools={selectedTools} setSelectTools={setSelectTools}></IconButton>
         <IconButton icon={<RectangleHorizontal />} name="rectangle" selectedTools={selectedTools} setSelectTools={setSelectTools}></IconButton>
         <IconButton icon={<Triangle  />}  name="triangle" selectedTools={selectedTools} setSelectTools={setSelectTools}></IconButton>
-        <IconButton icon={<Pencil  />}  name="pencil" selectedTools={selectedTools} setSelectTools={setSelectTools}></IconButton>
+        <IconButton icon={<Pencil  />}  name="point" selectedTools={selectedTools} setSelectTools={setSelectTools}></IconButton>
         <IconButton icon={<Text  />}  name="text" selectedTools={selectedTools} setSelectTools={setSelectTools}></IconButton>
         <IconButton icon={<ArrowDown/>}  name="arrow" selectedTools={selectedTools} setSelectTools={setSelectTools}></IconButton>
         <IconButton icon={<Minus/>}  name="line" selectedTools={selectedTools} setSelectTools={setSelectTools}></IconButton>
